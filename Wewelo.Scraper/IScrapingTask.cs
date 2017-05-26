@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace Wewelo.Scraper
 {
     public interface IScrapingTask
     {
-        void Execute(ScrapingEngine scrapingEngine, string payload);
+        Task Execute(ScrapingEngine scrapingEngine, string payload);
     }
 }

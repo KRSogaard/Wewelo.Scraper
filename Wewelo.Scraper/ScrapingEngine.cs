@@ -123,7 +123,7 @@ namespace Wewelo.Scraper
 
                 try
                 {
-                    scrapingTask.Execute(this, payload);
+                    await scrapingTask.Execute(this, payload);
                 }
                 catch (Exception exp)
                 {
@@ -161,11 +161,11 @@ namespace Wewelo.Scraper
             }
         }
 
-        public Task AddTask(string taskName, string payload = null)
+        public Task AddTask(TaskPayload newTask)
         {
             JObject json = new JObject();
-            json.Add("task", taskName);
-            json.Add("payload", payload);
+            json.Add("task", newTask.Task);
+            json.Add("payload", newTask.Payload);
 
             log.Info("Sending SQS message: " + json);
             return sqsClient.SendMessageAsync(new SendMessageRequest(config.SQSTaskQueue, json.ToString()));

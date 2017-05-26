@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 
 namespace Wewelo.Scraper.Tests.Extensions
 {
@@ -11,9 +12,12 @@ namespace Wewelo.Scraper.Tests.Extensions
             this.action = action;
         }
 
-        public void Execute(ScrapingEngine scrapingEngine, string payload)
+        public Task Execute(ScrapingEngine scrapingEngine, string payload)
         {
-            action(scrapingEngine, payload);
+            return Task.Run(() =>
+            {
+                action(scrapingEngine, payload);
+            });
         }
     }
 }
