@@ -5,9 +5,9 @@ namespace Wewelo.Scraper.Tests.Extensions
     public class ScrapingTaskFactoryTestClass : IScrapingTaskFactory
     {
         private string taskName;
-        private Action<ScrapingEngine, string> action;
+        private Action<IScrapingEngine, string> action;
 
-        public ScrapingTaskFactoryTestClass(string taskName, Action<ScrapingEngine, string> action)
+        public ScrapingTaskFactoryTestClass(string taskName, Action<IScrapingEngine, string> action)
         {
             this.taskName = taskName;
             this.action = action;

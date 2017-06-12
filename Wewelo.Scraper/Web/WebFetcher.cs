@@ -33,11 +33,29 @@ namespace Wewelo.Scraper.Web
         Exception
     }
 
-    public class WebFetcher
+    public class WebFetcherFactory : IWebFetcherFactory
+    {
+        private ProxyManager proxyManager;
+
+        public WebFetcherFactory()
+        {
+            
+        }
+        public WebFetcherFactory(ProxyManager proxyManager)
+        {
+            this.proxyManager = proxyManager;
+        }
+
+        public virtual IWebFetcher GetInstance()
+        {
+            return new WebFetcher(proxyManager);
+        }
+    }
+
+    public class WebFetcher : IWebFetcher
     {
         private static Logger log = LogManager.GetCurrentClassLogger();
-
-        private Uri url;
+        
         private HttpMethod method;
         private ProxyManager proxyManager;
         private TimeSpan timeOut;
@@ -47,7 +65,7 @@ namespace Wewelo.Scraper.Web
         private Func<string, bool> validateResult;
 
         private CookieContainer _cookieContainer;
-        public CookieContainer cookieContainer
+        public CookieContainer CookieContainer
         {
             get
             {
@@ -59,11 +77,11 @@ namespace Wewelo.Scraper.Web
             }
             set { _cookieContainer = value; }
         }
-        public void setRequestTimeOut(TimeSpan span)
+        public void SetRequestTimeOut(TimeSpan span)
         {
             timeOut = span;
         }
-        public void setValidator(Func<string, bool> validator)
+        public void SetValidator(Func<string, bool> validator)
         {
             validateResult = validator;
         }
@@ -80,13 +98,11 @@ namespace Wewelo.Scraper.Web
             formString = value;
         }
 
-        public WebFetcher(ProxyManager proxyManager, String url, HttpMethod method = null)
+        public WebFetcher(ProxyManager proxyManager)
         {
             Validator.NonNull("proxyManager", proxyManager);
-            Validator.NonEmpty("url", url);
 
             this.proxyManager = proxyManager;
-            this.url = new Uri(url);
             this.method = method ?? HttpMethod.Get;
             headers = new List<KeyValuePair<string, string>>();
             formData = new List<KeyValuePair<string, string>>();
@@ -96,19 +112,29 @@ namespace Wewelo.Scraper.Web
             validateResult = (html) => true;
         }
 
-        public async Task<WebFetcherResult> Download()
+        public Task<WebFetcherResult> Download(String url)
         {
-            var proxy = getProxy();
+            return Download(url, null);
+        }
+        public async Task<WebFetcherResult> Download(String url, HttpMethod method)
+        {
+            if (method == null)
+            {
+                method = HttpMethod.Get;
+            }
+            Validator.NonEmpty("url", url);
+            var uri = new Uri(url);
+            var proxy = getProxy(uri);
             try
             {
                 log.Debug($"Fetching URL: {url}");
                 using (var client = new HttpClient(GetHttpClientHandler(proxy)))
                 {
-                    AddHeadersToClient(client);
+                    AddHeadersToClient(client, uri);
 
-                    client.BaseAddress = url.PathAndQuery.Contains("https:")
-                        ? new Uri("https://" + url.Host)
-                        : new Uri("http://" + url.Host);
+                    client.BaseAddress = uri.PathAndQuery.Contains("https:")
+                        ? new Uri("https://" + uri.Host)
+                        : new Uri("http://" + uri.Host);
 
                     CancellationTokenSource cancelToken = new CancellationTokenSource();
                     log.Trace("Got web requset timeout of {0}", timeOut);
@@ -117,7 +143,7 @@ namespace Wewelo.Scraper.Web
                     DateTime start = DateTime.Now;
 
 
-                    var message = new HttpRequestMessage(method, url.PathAndQuery);
+                    var message = new HttpRequestMessage(method, uri.PathAndQuery);
                     AttachHeaders(message);
                     AttachContent(message);
 
@@ -202,7 +228,7 @@ namespace Wewelo.Scraper.Web
         {
             return new HttpClientHandler()
             {
-                CookieContainer = cookieContainer,
+                CookieContainer = CookieContainer,
                 UseDefaultCredentials = false,
                 UseProxy = true,
                 Proxy = proxy,
@@ -210,18 +236,18 @@ namespace Wewelo.Scraper.Web
             };
         }
 
-        private IWebProxy getProxy()
+        private IWebProxy getProxy(Uri uri)
         {
             var proxy = proxyManager.GetProxy();
             if (proxy == null)
             {
                 throw new ProxyException("No proxy is avalible.");
             }
-            log.Debug($"Got proxy \"{proxy.GetProxy(url)}\"");
+            log.Debug($"Got proxy \"{proxy.GetProxy(uri)}\"");
             return proxy;
         }
 
-        protected virtual void AddHeadersToClient(HttpClient client)
+        protected virtual void AddHeadersToClient(HttpClient client, Uri uri)
         {
             try
             {
@@ -237,7 +263,7 @@ namespace Wewelo.Scraper.Web
                 {
                     client.DefaultRequestHeaders.Remove("Host");
                 }
-                client.DefaultRequestHeaders.Add("Host", url.Host);
+                client.DefaultRequestHeaders.Add("Host", uri.Host);
             }
             catch (Exception e)
             {

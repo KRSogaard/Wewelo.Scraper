@@ -5,14 +5,14 @@ namespace Wewelo.Scraper.Tests.Extensions
 {
     public class ScrapingTaskTestClass : IScrapingTask
     {
-        private Action<ScrapingEngine, string> action;
+        private Action<IScrapingEngine, string> action;
 
-        public ScrapingTaskTestClass(Action<ScrapingEngine, string> action)
+        public ScrapingTaskTestClass(Action<IScrapingEngine, string> action)
         {
             this.action = action;
         }
 
-        public Task Execute(ScrapingEngine scrapingEngine, string payload)
+        public Task Execute(IScrapingEngine scrapingEngine, string payload)
         {
             return Task.Run(() =>
             {

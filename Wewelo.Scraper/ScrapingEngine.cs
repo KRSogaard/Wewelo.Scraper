@@ -25,7 +25,7 @@ namespace Wewelo.Scraper
         public int Threads;
     }
 
-    public class ScrapingEngine
+    public class ScrapingEngine : IScrapingEngine
     {
         private static Logger log = LogManager.GetCurrentClassLogger();
         private IAmazonS3 s3Client;
@@ -98,6 +98,11 @@ namespace Wewelo.Scraper
             
             log.Info("Incomming Task: " + body);
             var taskName = GetTaskName(taskObject);
+            // temp hax
+            if (String.Equals(taskName, "ItemParserPayload", StringComparison.CurrentCultureIgnoreCase))
+            {
+                taskName = "ItemParser";
+            }
 
             var factories = GetFactory(taskName);
             if (factories == null || factories.Count == 0)

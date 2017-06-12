@@ -7,6 +7,6 @@ namespace Wewelo.Scraper
 {
     public interface IScrapingTask
     {
-        Task Execute(ScrapingEngine scrapingEngine, string payload);
+        Task Execute(IScrapingEngine scrapingEngine, string payload);
     }
 }
