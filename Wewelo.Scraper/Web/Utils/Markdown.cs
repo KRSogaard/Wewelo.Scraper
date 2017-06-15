@@ -12,6 +12,8 @@ namespace Wewelo.Scraper.Web.Utils
             if (String.IsNullOrWhiteSpace(html))
                 return null;
 
+            html = html.Replace("<style>(.*?)</style>", html);
+
             html = html.Replace("&nbsp;", " ");
             html = RegexHelper.Replace(@"\s*<br\s*\/*>\s*", "\n", html);
             html = RegexHelper.Replace(@"\s*<\/*p>\s*", "\n", html);
