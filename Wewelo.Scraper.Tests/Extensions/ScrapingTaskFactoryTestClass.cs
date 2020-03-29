@@ -1,4 +1,5 @@
 using System;
+using Wewelo.Scraper.Engines;
 
 namespace Wewelo.Scraper.Tests.Extensions
 {

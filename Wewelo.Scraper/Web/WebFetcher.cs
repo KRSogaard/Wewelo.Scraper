@@ -98,10 +98,8 @@ namespace Wewelo.Scraper.Web
             formString = value;
         }
 
-        public WebFetcher(ProxyManager proxyManager)
+        public WebFetcher(ProxyManager proxyManager = null)
         {
-            Validator.NonNull("proxyManager", proxyManager);
-
             this.proxyManager = proxyManager;
             this.method = method ?? HttpMethod.Get;
             headers = new List<KeyValuePair<string, string>>();
@@ -124,7 +122,7 @@ namespace Wewelo.Scraper.Web
             }
             Validator.NonEmpty("url", url);
             var uri = new Uri(url);
-            var proxy = getProxy(uri);
+            IWebProxy proxy = getProxy(uri);
             try
             {
                 log.Debug($"Fetching URL: {url}");
@@ -164,17 +162,26 @@ namespace Wewelo.Scraper.Web
                         if (!validateResult(returnResult.HTML))
                         {
                             returnResult.Status = WebFetcherResultStatus.VerificationFailed;
-                            proxyManager.AddProxy(proxy, true);
+                            if (proxyManager != null)
+                            {
+                                proxyManager.AddProxy(proxy, true);
+                            }
                         }
                         else
                         {
-                            proxyManager.AddProxy(proxy, false);
+                            if (proxyManager != null)
+                            {
+                                proxyManager.AddProxy(proxy, false);
+                            }
                         }
                         return returnResult;
                     }
 
                     // Got bad response code
-                    proxyManager.AddProxy(proxy, true);
+                    if (proxyManager != null)
+                    {
+                        proxyManager.AddProxy(proxy, true);
+                    }
                     returnResult.Status = WebFetcherResultStatus.VerificationFailed;
                     return returnResult;
                 }
@@ -182,7 +189,10 @@ namespace Wewelo.Scraper.Web
             catch (Exception exp)
             {
                 log.Warn(exp, "Exception while downloading.");
-                proxyManager.AddProxy(proxy, false);
+                if (proxyManager != null)
+                {
+                    proxyManager.AddProxy(proxy, false);
+                }
                 return new WebFetcherResult()
                 {
                     Status = WebFetcherResultStatus.Exception,
@@ -226,6 +236,15 @@ namespace Wewelo.Scraper.Web
 
         private HttpClientHandler GetHttpClientHandler(IWebProxy proxy)
         {
+            if (proxy == null)
+            {
+                return new HttpClientHandler()
+                {
+                    CookieContainer = CookieContainer,
+                    UseDefaultCredentials = false,
+                    AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
+                };
+            }
             return new HttpClientHandler()
             {
                 CookieContainer = CookieContainer,
@@ -238,6 +257,11 @@ namespace Wewelo.Scraper.Web
 
         private IWebProxy getProxy(Uri uri)
         {
+            if (proxyManager == null)
+            {
+                return null;
+            }
+
             var proxy = proxyManager.GetProxy();
             if (proxy == null)
             {

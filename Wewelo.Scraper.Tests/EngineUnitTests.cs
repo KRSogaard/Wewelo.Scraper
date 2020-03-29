@@ -6,6 +6,7 @@ using Amazon.S3;
 using Amazon.S3.Model;
 using Amazon.SQS;
 using Moq;
+using Wewelo.Scraper.Engines;
 using Wewelo.Scraper.Exceptions;
 using Wewelo.Scraper.Tests.Extensions;
 using Xunit;
@@ -19,7 +20,7 @@ namespace Wewelo.Scraper.Tests
         {
             Mock<IAmazonS3> s3Mock = new Mock<IAmazonS3>();
             Mock<IAmazonSQS> sqsMock = new Mock<IAmazonSQS>();
-            ScrapingEngineConfig config = new ScrapingEngineConfig();
+            SQSScrapingEngineConfig config = new SQSScrapingEngineConfig();
             List<IScrapingTaskFactory> taskFactories = new List<IScrapingTaskFactory>();
 
             string messageBody = "{}";
@@ -34,7 +35,7 @@ namespace Wewelo.Scraper.Tests
         {
             Mock<IAmazonS3> s3Mock = new Mock<IAmazonS3>();
             Mock<IAmazonSQS> sqsMock = new Mock<IAmazonSQS>();
-            ScrapingEngineConfig config = new ScrapingEngineConfig();
+            SQSScrapingEngineConfig config = new SQSScrapingEngineConfig();
             List<IScrapingTaskFactory> taskFactories = new List<IScrapingTaskFactory>();
 
             string messageBody = "{ \"task\": \"UnknownTask\" }";
@@ -51,7 +52,7 @@ namespace Wewelo.Scraper.Tests
             int methodCalls = 0;
             Mock<IAmazonS3> s3Mock = new Mock<IAmazonS3>();
             Mock<IAmazonSQS> sqsMock = new Mock<IAmazonSQS>();
-            ScrapingEngineConfig config = new ScrapingEngineConfig();
+            SQSScrapingEngineConfig config = new SQSScrapingEngineConfig();
             List<IScrapingTaskFactory> taskFactories = new List<IScrapingTaskFactory>();
             taskFactories.Add(new ScrapingTaskFactoryTestClass(taskName, (scrapingEngine, s) =>
             {
@@ -74,7 +75,7 @@ namespace Wewelo.Scraper.Tests
             int method2Calls = 0;
             Mock<IAmazonS3> s3Mock = new Mock<IAmazonS3>();
             Mock<IAmazonSQS> sqsMock = new Mock<IAmazonSQS>();
-            ScrapingEngineConfig config = new ScrapingEngineConfig();
+            SQSScrapingEngineConfig config = new SQSScrapingEngineConfig();
             List<IScrapingTaskFactory> taskFactories = new List<IScrapingTaskFactory>();
             taskFactories.Add(new ScrapingTaskFactoryTestClass(taskName, (scrapingEngine, s) =>
             {
@@ -102,7 +103,7 @@ namespace Wewelo.Scraper.Tests
             int method2Calls = 0;
             Mock<IAmazonS3> s3Mock = new Mock<IAmazonS3>();
             Mock<IAmazonSQS> sqsMock = new Mock<IAmazonSQS>();
-            ScrapingEngineConfig config = new ScrapingEngineConfig();
+            SQSScrapingEngineConfig config = new SQSScrapingEngineConfig();
             List<IScrapingTaskFactory> taskFactories = new List<IScrapingTaskFactory>();
             taskFactories.Add(new ScrapingTaskFactoryTestClass(taskName, (scrapingEngine, s) =>
             {
@@ -129,7 +130,7 @@ namespace Wewelo.Scraper.Tests
 
             Mock<IAmazonS3> s3Mock = new Mock<IAmazonS3>();
             Mock<IAmazonSQS> sqsMock = new Mock<IAmazonSQS>();
-            ScrapingEngineConfig config = new ScrapingEngineConfig();
+            SQSScrapingEngineConfig config = new SQSScrapingEngineConfig();
             List<IScrapingTaskFactory> taskFactories = new List<IScrapingTaskFactory>();
             taskFactories.Add(new ScrapingTaskFactoryTestClass(taskName, (scrapingEngine, s) =>
             {

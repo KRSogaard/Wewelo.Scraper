@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using AmasTaskRunner;
@@ -16,26 +15,25 @@ using NLog;
 using Wewelo.Common;
 using Wewelo.Scraper.Exceptions;
 
-namespace Wewelo.Scraper
+namespace Wewelo.Scraper.Engines
 {
-    public class ScrapingEngineConfig
+    public class SQSScrapingEngineConfig
     {
         public string TaskFailureBucket;
         public string SQSTaskQueue;
         public int Threads;
     }
 
-    public class ScrapingEngine : IScrapingEngine
+    public class SQSScrapingEngine : BaseScapingEngine, IScrapingEngine
     {
         private static Logger log = LogManager.GetCurrentClassLogger();
         private IAmazonS3 s3Client;
         private IAmazonSQS sqsClient;
-        private ScrapingEngineConfig config;
-        private Dictionary<string, List<IScrapingTaskFactory>> taskFactories;
+        private SQSScrapingEngineConfig config;
         private SQSConsumer sqsConsumer;
 
-        public ScrapingEngine(IAmazonS3 s3Client, IAmazonSQS sqsClient, 
-            ScrapingEngineConfig config, List<IScrapingTaskFactory> taskFactories)
+        public SQSScrapingEngine(IAmazonS3 s3Client, IAmazonSQS sqsClient,
+            SQSScrapingEngineConfig config, List<IScrapingTaskFactory> taskFactories)
         {
             this.s3Client = s3Client;
             this.sqsClient = sqsClient;
@@ -52,31 +50,7 @@ namespace Wewelo.Scraper
             });
         }
 
-        private void PopulateFactories(List<IScrapingTaskFactory> scrapingTaskFactories)
-        {
-            this.taskFactories = new Dictionary<string, List<IScrapingTaskFactory>>();
-            foreach (var f in scrapingTaskFactories)
-            {
-                var name = CleanName(f.GetTaskName());
-                if (String.IsNullOrWhiteSpace(name))
-                {
-                    throw new Exception($"Task name for factory {f.GetType().Name} was empty.");
-                }
-
-                if (!taskFactories.ContainsKey(name))
-                {
-                    taskFactories.Add(name, new List<IScrapingTaskFactory>());
-                }
-                taskFactories[name].Add(f);
-            }
-        }
-
-        private string CleanName(string name)
-        {
-            return name?.Trim().ToUpper();
-        }
-
-        public Task Start()
+        public override Task Start()
         {
             return sqsConsumer.Start(OnSQSMessage);
         }
@@ -104,38 +78,9 @@ namespace Wewelo.Scraper
                 taskName = "ItemParser";
             }
 
-            var factories = GetFactory(taskName);
-            if (factories == null || factories.Count == 0)
-            {
-                log.Error($"Unknown task type \"{taskName}\"");
-                return;
-            }
-
             var payload = GetPayload(taskObject);
-            foreach (var factory in factories)
-            {
-                IScrapingTask scrapingTask;
 
-                try
-                {
-                    scrapingTask = factory.GetTaskInstance();
-                }
-                catch (Exception exp)
-                {
-                    log.Error(exp, $"Where unable to get task instance from {factory.GetType().Name} for task {taskName}.");
-                    continue;
-                }
-
-                try
-                {
-                    await scrapingTask.Execute(this, payload);
-                }
-                catch (Exception exp)
-                {
-                    log.Error(exp, $"Error while execute {scrapingTask.GetType().Name}.");
-                    await AddFailedTask(taskName, payload, exp);
-                }
-            }
+            await HandlePayload(new TaskPayload(taskName, payload));
         }
 
         private string GetPayload(JObject taskObject)
@@ -143,13 +88,7 @@ namespace Wewelo.Scraper
             return taskObject["payload"]?.ToString();
         }
 
-        private List<IScrapingTaskFactory> GetFactory(string taskName)
-        {
-            var cleanTaskName = CleanName(taskName);
-            return !taskFactories.ContainsKey(cleanTaskName) ? null : taskFactories[cleanTaskName];
-        }
-
-        private String GetTaskName(JObject taskObject)
+        private string GetTaskName(JObject taskObject)
         {
             if (taskObject["task"] == null)
             {
@@ -166,7 +105,7 @@ namespace Wewelo.Scraper
             }
         }
 
-        public Task AddTask(TaskPayload newTask)
+        public override Task AddTask(TaskPayload newTask)
         {
             JObject json = new JObject();
             json.Add("task", newTask.Task);
@@ -176,13 +115,13 @@ namespace Wewelo.Scraper
             return sqsClient.SendMessageAsync(new SendMessageRequest(config.SQSTaskQueue, json.ToString()));
         }
 
-        public Task AddFailedTask(String taskName, string payload, Exception exp = null)
+        public override Task AddFailedTask(TaskPayload task, Exception exp = null)
         {
             string exception = JsonConvert.SerializeObject(new 
             {
-                TakeType = taskName,
+                TakeType = task.Task,
                 Exception = exp,
-                Payload = payload
+                Payload = task.Payload
             }, Formatting.Indented, new JsonSerializerSettings
             {
                 Converters = new List<JsonConverter>() { new IsoDateTimeConverter(), new ExceptionJsonConverter() },
@@ -196,10 +135,15 @@ namespace Wewelo.Scraper
             var request = new PutObjectRequest
             {
                 BucketName = config.TaskFailureBucket,
-                Key = DateTime.UtcNow.ToString("yyyy-MM-dd-HH-mm-ss-ffff") + "." + taskName + ".json",
+                Key = DateTime.UtcNow.ToString("yyyy-MM-dd-HH-mm-ss-ffff") + "." + task.Task + ".json",
                 ContentBody = exception
             };
             return s3Client.PutObjectAsync(request, CancellationToken.None);
+        }
+
+        public override Task Stop()
+        {
+            return sqsConsumer.Stop();
         }
     }
 }

@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Wewelo.Scraper.Engines;
 
 namespace Wewelo.Scraper.Tests.Extensions
 {
